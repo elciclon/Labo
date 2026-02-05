@@ -797,7 +797,7 @@ consultaSQL = """SELECT DISTINCT de.*, nota As Parcial_01
                 
 auxParcial01 = dd.query(consultaSQL).df()
 
-consultaSQL = """SELECT DISTINCT aux.*, nota As Parcial_01
+consultaSQL = """SELECT DISTINCT aux.*, nota As Parcial_02
                 FROM auxParcial01 AS aux
                 LEFT OUTER JOIN examen AS e
                 ON aux.Nombre=e.Nombre AND instancia='Parcial-02'
@@ -824,13 +824,15 @@ auxRecu02= dd.query(consultaSQL).df()
 #%% -----------
 # b.- Agregar al ejercicio anterior la columna Estado, que informa si el alumno aprobó la cursada (APROBÓ/NO APROBÓ). Se aprueba con 4.
 
-consultaSQL = """SELECT DISTINCT *,
-                CASE WHEN Nota >= 4
-                THEN 'APROBÓ'
-                ELSE 'NO APROBÓ'
-                END AS Estado,
-                FROM examen
-                 
+consultaSQL = """SELECT aux.*, 
+                    CASE WHEN (aux.Parcial_01>=4 OR aux.Recuperatorio_01>=4) 
+                        AND
+                              (aux.Parcial_02>=4 OR aux.Recuperatorio_02>=4) 
+                        THEN 'APROBO'
+                        ELSE 'NO APROBO'
+                        END AS estado
+                FROM auxRecu02 AS aux
+                ORDER BY nombre
               """
 
 desafio_02 = dd.query(consultaSQL).df()
@@ -841,7 +843,23 @@ desafio_02 = dd.query(consultaSQL).df()
 # c.- Generar la tabla Examen a partir de la tabla obtenida en el desafío anterior.
 
 consultaSQL = """
-
+                SELECT nombre,sexo, edad, 'Parcial-01' AS instancia, parcial_01 AS nota
+                FROM desafio_02
+                WHERE nota NOT NULL
+            UNION
+                SELECT nombre,sexo, edad, 'Recuperatorio-01' AS instancia, recuperatorio_01 AS nota
+                FROM desafio_02
+                WHERE nota NOT NULL
+            UNION
+                SELECT nombre,sexo, edad, 'Parcial-02' AS instancia, parcial_02 AS nota
+                FROM desafio_02
+                WHERE nota NOT NULL
+            UNION
+                SELECT nombre,sexo, edad, 'Recuperatorio-02' AS instancia, recuperatorio_02 AS nota
+                FROM desafio_02
+                WHERE nota NOT NULL
+            
               """
+              
 
-desafio_03 = dd.sql(consultaSQL).df()
+desafio_03 = dd.query(consultaSQL).df()
