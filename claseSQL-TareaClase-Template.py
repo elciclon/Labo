@@ -632,20 +632,34 @@ dataframeResultado = dd.query(consultaSQL).df()
 # b.- Listar los alumnos que en cada instancia obtuvieron la mayor nota de dicha instancia
 
 consultaSQL = """
-
+                SELECT e1.nombre, e1.instancia, e1.nota
+                FROM examen AS e1
+                WHERE e1.Nota >= ALL(
+                    SELECT e2.Nota
+                    FROM examen As e2
+                    WHERE e2.instancia = e1.instancia)
+                ORDER BY Instancia ASC, Nota DESC;
+                              
               """
 
-dataframeResultado = dd.sql(consultaSQL).df()
+dataframeResultado = dd.query(consultaSQL).df()
 
 
 #%%-----------
 # c.- Listar el nombre, instancia y nota sólo de los estudiantes que no rindieron ningún Recuperatorio
 
 consultaSQL = """
-
+                SELECT DISTINCT e1.nombre
+                FROM examen AS e1
+                WHERE e1.nombre NOT IN(
+                    SELECT e2.nombre
+                    FROM examen As e2
+                    WHERE e2.instancia LIKE 'Recuperatorio%')
+                ORDER BY nombre ASC
+                              
               """
 
-dataframeResultado = dd.sql(consultaSQL).df()
+dataframeResultado = dd.query(consultaSQL).df()
 
 
 #%%===========================================================================
@@ -656,10 +670,12 @@ dataframeResultado = dd.sql(consultaSQL).df()
 umbralNota = 7
 
 consultaSQL = """
+                SELECT DISTINCT nombre, instancia, nota
+                FROM examen
+                WHERE nota > """ + str(umbralNota)
+                
 
-              """
-
-dataframeResultado = dd.sql(consultaSQL).df()
+dataframeResultado = dd.query(consultaSQL).df()
 
 
 #%%===========================================================================
@@ -668,73 +684,83 @@ dataframeResultado = dd.sql(consultaSQL).df()
 # a.- Listar todas las tuplas de Examen03 cuyas Notas son menores a 9
 
 consultaSQL = """
-
+                SELECT DISTINCT *
+                FROM examen03 
+                WHERE nota < 9
               """
 
-dataframeResultado = dd.sql(consultaSQL).df()
+dataframeResultado = dd.query(consultaSQL).df()
 
 #%%-----------
 # b.- Listar todas las tuplas de Examen03 cuyas Notas son mayores o iguales a 9
 
 consultaSQL = """
-
+                SELECT DISTINCT *
+                FROM examen03 
+                WHERE nota >= 9
               """
 
 
-dataframeResultado = dd.sql(consultaSQL).df()
+dataframeResultado = dd.query(consultaSQL).df()
 
 
 #%%-----------
 # c.- Listar el UNION de todas las tuplas de Examen03 cuyas Notas son menores a 9 y las que son mayores o iguales a 9
 
 consultaSQL = """
-
+                SELECT DISTINCT *
+                FROM examen03 
+                WHERE nota >= 9 OR nota < 9
               """
 
 
-dataframeResultado = dd.sql(consultaSQL).df()
+dataframeResultado = dd.query(consultaSQL).df()
 
 
 #%%-----------
 # d1.- Obtener el promedio de notas
 
 consultaSQL = """
+                SELECT AVG(nota) AS PromedioNota
+                FROM examen03
 
               """
 
 
-dataframeResultado = dd.sql(consultaSQL).df()
+dataframeResultado = dd.query(consultaSQL).df()
 
 
 #%%-----------
 # d2.- Obtener el promedio de notas (tomando a NULL==0)
 
 consultaSQL = """
+                SELECT AVG(CASE WHEN nota IS NULL THEN 0 ELSE Nota END) AS PromedioNota
+                FROM examen03
 
               """
 
 
-dataframeResultado = dd.sql(consultaSQL).df()
+dataframeResultado = dd.query(consultaSQL).df()
 
 #%%===========================================================================
 # Ejercicios SQL - Mayúsculas/Minúsculas
 #=============================================================================
 # a.- Consigna: Transformar todos los caracteres de las descripciones de los roles a mayúscula
 
-consultaSQL = """
-
+consultaSQL = """SELECT empleado, UPPER(rol) as rol
+                FROM empleadoRol;
               """
 
-dataframeResultado = dd.sql(consultaSQL).df()
+dataframeResultado = dd.query(consultaSQL).df()
 
 #%%-----------
 # b.- Consigna: Transformar todos los caracteres de las descripciones de los roles a minúscula
 
-consultaSQL = """
-
+consultaSQL = """SELECT empleado, LOWER(rol) as rol
+                FROM empleadoRol;
               """
 
-dataframeResultado = dd.sql(consultaSQL).df()
+dataframeResultado = dd.query(consultaSQL).df()
 
 
 
@@ -744,36 +770,70 @@ dataframeResultado = dd.sql(consultaSQL).df()
 #=============================================================================
 # a.- Consigna: En la descripción de los roles de los empleados reemplazar las ñ por ni
 
-consultaSQL = """
-
+consultaSQL = """SELECT empleado, REPLACE(REPLACE(rol, 'ñ', 'ni'),'dor/a','dore') as rol
+                FROM empleadoRol;
               """
 
-dataframeResultado = dd.sql(consultaSQL).df()
+dataframeResultado = dd.query(consultaSQL).df()
 
 
 #%%===========================================================================
 # Ejercicios SQL - Desafío
 #=============================================================================
-# a.- Mostrar para cada estudiante las siguientes columnas con sus datos: Nombre, Sexo, Edad, Nota-Parcial-01, Nota-Parcial-02, Recuperatorio-01 y , Recuperatorio-02
+# a.- Mostrar para cada estudiante las siguientes columnas con sus datos: Nombre, Sexo, Edad, C
 
 # ... Paso 1: Obtenemos los datos de los estudiantes
-consultaSQL = """
+consultaSQL = """SELECT DISTINCT nombre, sexo, edad
+               FROM examen         
+           """
+           
+datosEstudiantes = dd.query(consultaSQL).df()   
 
-              """
+consultaSQL = """SELECT DISTINCT de.*, nota As Parcial_01
+                FROM datosEstudiantes AS de
+                LEFT OUTER JOIN examen AS e
+                ON de.Nombre=e.Nombre AND instancia='Parcial-01'
+                """
+                
+auxParcial01 = dd.query(consultaSQL).df()
 
+consultaSQL = """SELECT DISTINCT aux.*, nota As Parcial_01
+                FROM auxParcial01 AS aux
+                LEFT OUTER JOIN examen AS e
+                ON aux.Nombre=e.Nombre AND instancia='Parcial-02'
+                """
+auxParcial02 = dd.query(consultaSQL).df()
 
-desafio_01 = consultaSQL
+consultaSQL = """SELECT DISTINCT aux.*, nota As Recuperatorio_01
+                FROM auxParcial02 AS aux
+                LEFT OUTER JOIN examen AS e
+                ON aux.Nombre=e.Nombre AND instancia='Recuperatorio-01'
+                """
+auxRecu01= dd.query(consultaSQL).df()
+
+consultaSQL = """SELECT DISTINCT aux.*, nota As Recuperatorio_02
+                FROM auxRecu01 AS aux
+                LEFT OUTER JOIN examen AS e
+                ON aux.Nombre=e.Nombre AND instancia='Recuperatorio-02'
+                """
+auxRecu02= dd.query(consultaSQL).df()
+# desafio_01 = dd.query(consultaSQL).df()
 
 
 
 #%% -----------
 # b.- Agregar al ejercicio anterior la columna Estado, que informa si el alumno aprobó la cursada (APROBÓ/NO APROBÓ). Se aprueba con 4.
 
-consultaSQL = """
+consultaSQL = """SELECT DISTINCT *,
+                CASE WHEN Nota >= 4
+                THEN 'APROBÓ'
+                ELSE 'NO APROBÓ'
+                END AS Estado,
+                FROM examen
                  
               """
 
-desafio_02 = dd.sql(consultaSQL).df()
+desafio_02 = dd.query(consultaSQL).df()
 
 
 
