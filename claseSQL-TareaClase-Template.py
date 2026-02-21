@@ -265,7 +265,13 @@ dataframeResultado = dd.query(consultaSQL).df()
 #%%-----------
 # Ejercicio 02.3.- Retornar los códigos de aeropuerto de los que parten o arriban los vuelos
 consultaSQL = """
-
+                SELECT DISTINCT codigo FROM aeropuerto
+            INTERSECT
+                SELECT DISTINCT origen FROM vuelo
+            UNION
+                SELECT DISTINCT codigo FROM aeropuerto
+            INTERSECT
+                SELECT DISTINCT destino FROM vuelo
               """
               
 dataframeResultado = dd.sql(consultaSQL).df()
